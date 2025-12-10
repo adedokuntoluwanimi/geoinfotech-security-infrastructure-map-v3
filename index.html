@@ -1,0 +1,1536 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="./resources/ol.css">
+        <link rel="stylesheet" href="resources/fontawesome-all.min.css">
+        <link href="resources/photon-geocoder-autocomplete.min.css" rel="stylesheet">
+        <link rel="stylesheet" href="./resources/ol-layerswitcher.css">
+        <link rel="stylesheet" href="./resources/qgis2web.css">
+        <style>
+        html, body {
+            background-color: #ffffff;
+        }
+        .ol-control > * {
+            background-color: #f8f8f8!important;
+            color: #444444!important;
+            border-radius: 0px;
+        }
+        .ol-attribution a, .gcd-gl-input::placeholder, .search-layer-input-search::placeholder {
+            color: #444444!important;
+        }
+        .search-layer-input-search {
+            background-color: #f8f8f8!important;
+        }
+        .ol-control > *:focus, .ol-control >*:hover {
+            background-color: rgba(248, 248, 248, 0.7)!important;
+        } 
+        .ol-control {
+            background-color: rgba(255,255,255,.4) !important;
+            padding: 2px !important;
+        } 
+        </style>
+
+        <style>
+        html, body, #map {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        /* Make map a positioned container for overlays */
+        #map {
+            position: relative;
+        }
+
+        .ui-panel {
+            position: absolute;
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.96);
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            padding: 10px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-size: 13px;
+        }
+
+        /* Left compare panel centered vertically */
+#compare-panel {
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+}
+
+/* Right search panel centered vertically */
+#search-panel {
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 260px;
+}
+
+/* Logo bottom-left */
+#logo-panel {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    width: 135px;
+    z-index: 1000;
+}
+
+#logo-panel img {
+    width: 100%;
+    opacity: 1;
+}
+
+/* Legend top-right */
+#legend-panel {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+    width: 220px;
+    z-index: 1000;
+    background-color: rgba(255,255,255,0.96);
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.22);
+    padding: 10px;
+    font-size: 13px;
+}
+
+        </style>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+        <title></title>
+    </head>
+            <body>
+    <div id="map">
+<button id="resetNigeriaBtn"
+    style="
+        position:absolute;
+        top:10px;
+        left:50%;
+        transform:translateX(-50%);
+        z-index:2000;
+        padding:6px 14px;
+        background:#004aad;
+        color:#fff;
+        border:none;
+        border-radius:4px;
+        font-size:12px;
+        cursor:pointer;
+    ">
+    Reset View
+</button>
+
+        <!-- Popup used by qgis2web -->
+        <div id="popup" class="ol-popup">
+            <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+            <div id="popup-content"></div>
+        </div>
+
+        <!-- LEFT PANEL -->
+        <!-- LEFT PANEL -->
+<div id="compare-panel" class="ui-panel">
+    <strong>Compare Regions</strong>
+
+    <!-- Region A -->
+    <div style="margin-top:8px; font-size:12px; font-weight:bold;">Region A</div>
+    <select id="a-state" style="width:100%; margin-top:4px;">
+        <option value="">State</option>
+    </select>
+    <select id="a-lga" style="width:100%; margin-top:4px;">
+        <option value="">LGA</option>
+    </select>
+    <select id="a-ward" style="width:100%; margin-top:4px;">
+        <option value="">Ward (optional)</option>
+    </select>
+
+    <!-- Region B -->
+    <div style="margin-top:12px; font-size:12px; font-weight:bold;">Region B</div>
+    <select id="b-state" style="width:100%; margin-top:4px;">
+        <option value="">State</option>
+    </select>
+    <select id="b-lga" style="width:100%; margin-top:4px;">
+        <option value="">LGA</option>
+    </select>
+    <select id="b-ward" style="width:100%; margin-top:4px;">
+        <option value="">Ward (optional)</option>
+    </select>
+
+    <!-- Compare button -->
+    <button id="compare-btn"
+            style="margin-top:10px; width:100%; padding:6px; background-color:#004aad; color:white; border:none; border-radius:3px; font-size:12px;">
+        Compare
+    </button>
+
+    <!-- Result area -->
+    <div id="compare-result"
+         style="margin-top:8px; font-size:12px; color:#444;">
+        Select regions and click Compare.
+    </div>
+    <div id="compare-report-action"
+     style="margin-top:8px; display:none;"></div>
+
+</div>
+
+
+        <!-- RIGHT PANEL -->
+        <div id="search-panel" class="ui-panel">
+
+    <div id="report-action"
+         style="margin-bottom:10px; display:none; text-align:right;"></div>
+
+    <strong>Search region</strong>
+
+<div style="margin-top:10px;">
+    <label style="font-size:12px; color:#444;">Search level:</label>
+    <select id="search-level" style="width:100%; margin-top:4px;">
+        <option value="state">State</option>
+        <option value="lga">LGA</option>
+        <option value="ward">Ward</option>
+    </select>
+</div>
+
+<div style="margin-top:10px;">
+    <label style="font-size:12px; color:#444;">Enter name:</label>
+    <input id="search-input"
+           type="text"
+           style="width:100%; padding:6px; margin-top:4px; border:1px solid #ddd; border-radius:3px;">
+</div>
+
+<button id="search-btn"
+        style="margin-top:10px; width:100%; padding:6px; background-color:#004aad; color:white; border:none; border-radius:3px; font-size:12px;">
+    Search
+</button>
+
+<div id="search-result"
+     style="margin-top:8px; font-size:12px; color:#444;"></div>
+
+        </div>
+        
+
+        <!-- LOGO BOTTOM-LEFT -->
+        <div id="logo-panel">
+            <img src="images/logo.jpg" alt="Company Logo">
+        </div>
+
+        <!-- LEGEND TOP-RIGHT -->
+        <!-- LEGEND TOP-RIGHT -->
+<div id="legend-panel">
+    <strong style="font-size:13px; display:block; margin-bottom:10px;">LEGEND</strong>
+
+    <div style="font-size:12px; margin-bottom:14px;">
+    <strong>Risk Index</strong>
+
+    <div style="display:flex; align-items:center; margin-top:6px; margin-bottom:5px;">
+        <div style="width:14px; height:14px; background-color:#6ae07e; border:1px solid #000; margin-right:6px;"></div>
+        33 - 190
+    </div>
+
+    <div style="display:flex; align-items:center; margin-bottom:5px;">
+        <div style="width:14px; height:14px; background-color:#eff355; border:1px solid #000; margin-right:6px;"></div>
+        190 - 390
+    </div>
+
+    <div style="display:flex; align-items:center; margin-bottom:5px;">
+        <div style="width:14px; height:14px; background-color:#f9c44d; border:1px solid #000; margin-right:6px;"></div>
+        390 - 889
+    </div>
+
+    <div style="display:flex; align-items:center; margin-bottom:5px;">
+        <div style="width:14px; height:14px; background-color:#ef6f32; border:1px solid #000; margin-right:6px;"></div>
+        889 - 3757
+    </div>
+
+    <div style="display:flex; align-items:center; margin-bottom:5px;">
+        <div style="width:14px; height:14px; background-color:#ce3734; border:1px solid #000; margin-right:6px;"></div>
+        3757 - 2807984
+    </div>
+</div>
+
+
+
+    <div style="font-size:12px;">
+        <strong>Major Roads</strong>
+
+        <div style="display:flex; align-items:center; margin-top:6px;">
+            <div style="width:14px; height:2px; background-color:#000; margin-right:6px;"></div>
+            Road Network
+        </div>
+    </div>
+
+</div>
+
+    </div>
+</body>
+
+        <script src="resources/qgis2web_expressions.js"></script>
+        <script src="./resources/functions.js"></script>
+        <script src="./resources/ol.js"></script>
+        <script src="./resources/ol-layerswitcher.js"></script>
+        <script src="resources/photon-geocoder-autocomplete.min.js"></script>
+        <script src="layers/WardBoundaries_0.js"></script><script src="layers/RiskIndex_1.js"></script><script src="layers/MajorRoads_2.js"></script>
+        <script src="styles/WardBoundaries_0_style.js"></script><script src="styles/RiskIndex_1_style.js"></script><script src="styles/MajorRoads_2_style.js"></script>
+        <script src="./layers/layers.js" type="text/javascript"></script> 
+        <script src="./resources/Autolinker.min.js"></script>
+
+
+           <script>
+// Layers for searching
+let wardLayer  = lyr_WardBoundaries_0;  // has statename, lganame, wardname
+let stateLayer = wardLayer;       // state polygons with statename
+
+function getMapCanvas() {
+    const canvases = document.querySelectorAll("canvas");
+
+    // OpenLayers draws multiple canvases
+    // We need the very top visible one
+    let topCanvas = null;
+    let highestZ = -1;
+
+    canvases.forEach(c => {
+        const z = window.getComputedStyle(c).zIndex;
+        const num = isNaN(parseInt(z)) ? 0 : parseInt(z);
+        if (num >= highestZ) {
+            highestZ = num;
+            topCanvas = c;
+        }
+    });
+
+    return topCanvas;
+}
+
+// Function to normalize text (case-insensitive and ignore -, /, ., spaces)
+function normalize(value) {
+    if (!value) return "";
+
+    let v = value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[-./]/g, "")
+        .replace(/\s+/g, "");
+
+    // Special casing for F.C.T variations
+    if (v.includes("federalcapitalterritory")) return "fct";
+    if (v.includes("federalcapitalterrittory")) return "fct"; // your dataset spelling
+    if (v === "fct") return "fct";
+
+    return v;
+}
+
+
+document.getElementById('search-btn').addEventListener('click', () => {
+    const level     = document.getElementById('search-level').value;
+    const userInput = document.getElementById('search-input').value;
+    const resultDiv = document.getElementById('search-result');
+
+    const query = normalize(userInput);
+    if (!query) {
+        resultDiv.innerHTML = "Enter a name.";
+        return;
+    }
+// Split input into tokens we can reuse (for flexible state matching)
+const rawTokens = userInput.toLowerCase().trim().split(/\s+/);
+const tokens = rawTokens
+    .map(t => normalize(t))
+    .filter(t => t.length > 0);
+
+    // Decide which layer + field to search
+    let layerToSearch;
+    let fieldName;
+
+    if (level === "state") {
+    layerToSearch = stateLayer;
+    fieldName     = "statename";
+}
+else if (level === "lga") {
+    layerToSearch = wardLayer;
+    fieldName     = "lganame";
+}
+else {
+    layerToSearch = wardLayer;
+    fieldName     = "wardname";
+}
+
+
+    // Find matching feature
+   // Find matching features (maybe more than one for LGA)
+let foundFeatures = [];
+
+
+
+layerToSearch.getSource().getFeatures().forEach(f => {
+    const rawValue   = f.get(fieldName);
+    const l = normalize(rawValue);
+
+    if (level === "lga") {
+
+        // Must match LGA name
+        if (!l.includes(tokens[0])) return;
+
+        // Try match state if supplied
+        const s = normalize(f.get("statename"));
+        
+        if (tokens.length >= 2) {
+            const second = tokens[1];
+            if (!s.includes(second)) return;
+        }
+
+        foundFeatures.push(f);
+        return;
+    }
+
+    // State & Ward fallback logic remains same
+    if (normalize(rawValue) === query) {
+        foundFeatures.push(f);
+    }
+});
+
+
+
+if (foundFeatures.length === 0) {
+    resultDiv.innerHTML = "No match found.";
+    return;
+}
+// Build base extent from all found features (state or LGA or ward)
+let extent = null;
+
+foundFeatures.forEach(f => {
+    const geomExtent = f.getGeometry().getExtent();
+    if (!extent) {
+        // clone to avoid mutating the original extent array
+        extent = geomExtent.slice();
+    } else {
+        extent = ol.extent.extend(extent, geomExtent);
+    }
+});
+
+    highlightSource.clear();
+    // Store report metadata for later PDF generation
+let selected = foundFeatures[0];
+
+const scores = foundFeatures.map(f => Number(f.get("risk_score")) || 0);
+const avgScore = scores.reduce((a,b)=>a+b,0) / scores.length;
+
+let selectedStateName = selected.get("statename");
+let selectedLGAName   = selected.get("lganame");
+let selectedWardName  = selected.get("wardname");
+
+let finalScore = avgScore;  // default
+
+// IMPORTANT FIX:
+// When searching STATE, fetch score from RiskIndex layer
+if (level === "state") {
+    let riskFeature = lyr_RiskIndex_1.getSource().getFeatures().find(
+        ff => normalize(ff.get("statename")) === normalize(selectedStateName)
+    );
+
+    if (riskFeature) {
+        // Replace with the state-level risk score
+        finalScore = Number(riskFeature.get("risk_score")) || Number(riskFeature.get("Risk Index_risk_score")) || avgScore;
+    }
+}
+
+window.lastReportMeta = {
+    name_state: selectedStateName,
+    name_lga: selectedLGAName,
+    name_ward: selectedWardName,
+    risk_score: finalScore
+};
+
+
+
+    // FILTER wards belonging only to same LGA/state if possible
+if (level === "ward") {
+
+    const rawInput = userInput.toLowerCase().trim();
+    const tokens = rawInput.split(/\s+/).map(t => normalize(t));
+
+    const allWards = wardLayer.getSource().getFeatures();
+
+    const wardMatches = allWards.filter(f => {
+        const w = normalize(f.get("wardname"));  
+        const l = normalize(f.get("lganame"));
+        const s = normalize(f.get("statename"));
+
+        // First token (most important) must match wardname
+        const firstToken = tokens[0];
+        if (!w.includes(firstToken)) return false;
+
+        // If second token exists, match either state or lga
+        if (tokens.length >= 2) {
+            const second = tokens[1];
+            let matchesSecond =
+                s.includes(second) || l.includes(second);
+
+            if (!matchesSecond) return false;
+        }
+
+        // If third token exists, enforce matching precisely
+        if (tokens.length >= 3) {
+            const third = tokens[2];
+            let matchesThird =
+                s.includes(third) || l.includes(third);
+
+            if (!matchesThird) return false;
+        }
+
+        return true;
+    });
+
+   if (wardMatches.length === 0) {
+    resultDiv.innerHTML = "No ward found. Try adding state or LGA.";
+    return;
+}
+
+// If user typed only the ward name and there are many, show clickable list
+if (wardMatches.length > 1 && tokens.length === 1) {
+    resultDiv.innerHTML =
+        "Multiple matches found (click one to zoom):<br>" +
+        wardMatches.map((f, idx) => {
+            const label =
+                `${f.get("wardname")} — ${f.get("lganame")} — ${f.get("statename")}`;
+            return `<a href="#" class="ward-option" data-idx="${idx}">${label}</a>`;
+        }).join("<br>");
+
+    // Attach click handlers for each option
+    const links = resultDiv.querySelectorAll(".ward-option");
+    links.forEach(link => {
+        link.addEventListener("click", (e) => {
+            e.preventDefault();
+            const idx = parseInt(e.currentTarget.getAttribute("data-idx"), 10);
+            const chosen = wardMatches[idx];
+
+            // Clear previous highlight
+            highlightSource.clear();
+
+            // Highlight chosen ward
+            const featCopy = new ol.Feature({
+                geometry: chosen.getGeometry().clone()
+            });
+            highlightSource.addFeature(featCopy);
+
+            // Zoom to chosen ward
+            let singleExtent = chosen.getGeometry().getExtent().slice();
+            singleExtent = ol.extent.buffer(singleExtent, 3000);
+
+            map.getView().fit(singleExtent, {
+                duration: 800,
+                padding: [40, 300, 40, 40],
+                maxZoom: 15
+            });
+
+            resultDiv.innerHTML =
+                `Zoomed to: ${chosen.get("wardname")} — ` +
+                `${chosen.get("lganame")} — ${chosen.get("statename")}`;
+        });
+    });
+
+    // Stop here, zoom happens when user clicks a line
+    return;
+}
+
+    // Build extent from exact matches
+    let wardExtent = null;
+
+    wardMatches.forEach(f => {
+        const geomExtent = f.getGeometry().getExtent();
+        if (!wardExtent) wardExtent = geomExtent.slice();
+        else wardExtent = ol.extent.extend(wardExtent, geomExtent);
+    });
+
+    extent = wardExtent;
+    foundFeatures = wardMatches;
+}
+
+
+
+
+
+if (level === "state") {
+    // Highlight only state polygon from RiskIndex Layer
+    const stateFeature = lyr_RiskIndex_1.getSource().getFeatures()
+        .find(f => normalize(f.get("statename")) === normalize(tokens[0]));
+
+    if (stateFeature) {
+        const featCopy = new ol.Feature({
+            geometry: stateFeature.getGeometry().clone()
+        });
+        highlightSource.addFeature(featCopy);
+    }
+} else {
+    // Existing behaviour for ward and lga
+    foundFeatures.forEach(f => {
+        let featCopy = new ol.Feature({
+            geometry: f.getGeometry().clone()
+        });
+        highlightSource.addFeature(featCopy);
+    });
+}
+
+
+    // If searching a state, add label at interior point
+    if (level === "state") {
+    const selectedState = foundFeatures[0].get("statename");
+
+    // Get all wards belonging to that state
+    let stateExtent = null;
+    wardLayer.getSource().getFeatures().forEach(f => {
+        if (normalize(f.get("statename")) === normalize(selectedState)) {
+            const ext = f.getGeometry().getExtent();
+            if (!stateExtent) stateExtent = ext.slice();
+            else stateExtent = ol.extent.extend(stateExtent, ext);
+        }
+    });
+
+    extent = stateExtent;
+}
+
+
+    
+
+// Zoom to extent of found feature(s)
+if (!extent || ol.extent.isEmpty(extent)) {
+    console.warn("Empty extent, cannot zoom");
+} else {
+    // Buffer in metres (map is EPSG:3857)
+    const bufferByLevel =
+        level === "state" ? 50000 :   // 20 km
+        level === "lga"   ? 30000 :   // 10 km
+                            3000;     // 3 km for wards
+
+    extent = ol.extent.buffer(extent, bufferByLevel);
+
+    // Padding so the right panel does not cover the geometry
+    const paddingByLevel =
+        level === "state" ? [80, 350, 80, 80] :
+        level === "lga"   ? [80, 350, 80, 80] :
+                            [40, 300, 40, 40];
+
+    const maxZoomByLevel =
+        level === "state" ? 15:
+        level === "lga"   ? 13 :
+                            12;
+
+    map.getView().fit(extent, {
+        duration: 800,
+        padding: paddingByLevel,
+        maxZoom: maxZoomByLevel,
+    });
+}
+
+
+resultDiv.innerHTML = "Match located.";
+
+// Show Download PDF button (HTML only)
+const actionDiv = document.getElementById("report-action");
+actionDiv.innerHTML = `
+    <button id="downloadReportBtn"
+        style="width:100%; padding:8px; margin-top:6px; background-color:#004aad; color:white; border:none; border-radius:3px;">
+        Download Risk Report (PDF)
+    </button>
+`;
+actionDiv.style.display = "block";
+
+//
+// CAPTURE MAP SNAPSHOT into the small box
+//
+setTimeout(() => {
+    const mapCanvas = getMapCanvas(); // Capture real OL canvas
+
+    if (!mapCanvas) {
+        console.warn("NO MAP CANVAS CAPTURED");
+        return;
+    }
+
+    const snapshotImage = mapCanvas.toDataURL("image/png");
+
+    const img = document.getElementById("pdf-map-image");
+    img.src = snapshotImage;
+    img.style.display = "block";
+
+}, 1200); // slightly longer wait
+
+
+
+// When user clicks the button, generate PDF
+document.getElementById("downloadReportBtn").addEventListener("click", () => {
+    if (!window.lastReportMeta) return;
+
+    const result = buildRiskReportNarrative(window.lastReportMeta);
+    generatePDF(window.lastReportMeta, result.paragraphs);
+});
+
+
+    const result = buildRiskReportNarrative(window.lastReportMeta);
+
+    console.log("===== CLASSIFICATION =====");
+    console.log(result.classification);
+
+    console.log("===== PARAGRAPHS =====");
+    console.log(result.paragraphs[0]);
+    console.log(result.paragraphs[1]);
+    console.log(result.paragraphs[2]);
+
+});
+function buildRiskReportNarrative(meta) {
+    const score = Number(meta.risk_score) || 0;
+
+
+    // Classification from provided ranges
+    let classification = "";
+    if (score <= 190) classification = "Very Low";
+    else if (score <= 390) classification = "Low";
+    else if (score <= 889) classification = "Medium";
+    else if (score <= 3757) classification = "High";
+    else classification = "Very High";
+
+    // ======== PARAGRAPH 1 — HOW SCORING WORKS GENERALLY ========
+    const p1 =
+        `The security exposure scores are computed using adjusted components including reported criminal incidents, policing coverage, ` +
+        `military presence and a population-to-road-length ratio. Each factor contributes according to its environmental importance, ` +
+        `using a weighting structure that places greater emphasis on criminal case frequency, while policing and military influence ` +
+        `serve as stabilizing indicators. The calculation represents the combined behavioural pattern of incident occurrence, response capacity, ` +
+        `and movement accessibility within local boundaries.`;
+
+    // ======== PARAGRAPH 2 — WHAT MADE THIS LOCATION'S SCORE SPECIFIC ========
+    const p2 =
+    `For this location, the security condition aligns with a ${classification.toLowerCase()} exposure band. ` +
+    `The rating reflects the relative distribution of incident activities, operational presence, and accessibility ` +
+    `within the surrounding area. Local institutional infrastructure and monitoring consistency influence the ` +
+    `exposure level and determine how activities should be planned and executed.`;
+
+
+    // ======== PARAGRAPH 3 — ACTUAL IMPLICATION / VERDICT ========
+    let implication = "";
+
+    if (classification === "Very Low") {
+        implication =
+            `Field activities can proceed with minimal concern, as historical exposure remains consistently low. Regular operations and general ` +
+            `movement remain favourable, requiring only standard situational awareness.`;
+    }
+    else if (classification === "Low") {
+        implication =
+            `Risk conditions remain manageable, and operational exposure is low but not negligible. Movement remains safe under usual field context, ` +
+            `but ensuring responsible scheduling and routine environment awareness is advised.`;
+    }
+    else if (classification === "Medium") {
+        implication =
+            `Operational planning is still feasible, although the environment is not fully insulated from security variation. Travel planning, crew ` +
+            `awareness and location confirmation steps improve safety where intermediate exposure factors exist.`;
+    }
+    else if (classification === "High") {
+        implication =
+            `Movement within this location should incorporate pre-activity risk checks and confirmed routing. Field engagements would benefit from ` +
+            `contact response arrangements and periodic monitoring to manage heightened uncertainty.`;
+    }
+    else {
+        implication =
+            `Engagements within this area should be treated as highly sensitive due to elevated exposure indicators. Field movement should involve ` +
+            `layered route planning, remote situational monitoring and possibly escorted movement, depending on operational requirements.`;
+    }
+
+    const p3 = implication;
+
+    return {
+        classification,
+        paragraphs: [p1, p2, p3]
+    };
+}
+function generatePDF(meta, paragraphs) {
+    const element = document.getElementById("pdfContent");
+
+    const levelSelected = document.getElementById("search-level").value;
+
+    let loc = "";
+    let filenameBase = "";
+
+    if (levelSelected === "state") {
+        loc = meta.name_state;
+        filenameBase = meta.name_state;
+    }
+
+    if (levelSelected === "lga") {
+        loc = `${meta.name_lga}, ${meta.name_state}`;
+        filenameBase = meta.name_lga;
+    }
+
+    if (levelSelected === "ward") {
+        loc = `${meta.name_ward}, ${meta.name_lga}, ${meta.name_state}`;
+        filenameBase = meta.name_ward;
+    }
+
+    const report = buildRiskReportNarrative(meta);
+
+    document.getElementById("pdf-location").innerText = loc;
+    document.getElementById("pdf-class").innerText = report.classification;
+
+    document.getElementById("pdf-p1").innerText = report.paragraphs[0];
+    document.getElementById("pdf-p2").innerText = report.paragraphs[1];
+    document.getElementById("pdf-p3").innerText = report.paragraphs[2];
+    const img = document.getElementById("pdf-map-image");
+img.style.display = "block";
+img.style.width = "auto";
+img.style.height = "100%";
+img.style.objectFit = "contain";
+
+
+    element.style.display = "block";
+
+    setTimeout(() => {
+        html2pdf()
+            .from(element)
+            .set({
+                margin: 0,
+                filename: `Risk_Report_${filenameBase}.pdf`,
+                jsPDF: { format: "a4", orientation: "portrait" },
+                html2canvas: { scale: 2 }
+            })
+            .save()
+            .then(() => {
+                element.style.display = "none";
+            });
+    }, 300);
+}
+
+function buildComparisonNarrative(summary) {
+
+    const p1 =
+    `The interpreted result reflects the exposure tendencies derived from differing event frequencies, coverage stability ` +
+    `and movement accessibility observed in the two referenced environments. Each region expresses its own operational ` +
+    `behavioural structure, shaped by historical activity, monitoring consistency and how field access routes interact ` +
+    `with local movement conditions.`;
+
+const p2 =
+    `Region A exhibits an exposure outcome represented by an average score of ${summary.statsA.avgScore}, classified as ` +
+    `${summary.statsA.riskClass.toLowerCase()}. This reflects a pattern where planning still requires structured sequencing, ` +
+    `attention to activity timing and stronger situational alignment during movement. Region B returns an average score of ` +
+    `${summary.statsB.avgScore}, classified as ${summary.statsB.riskClass.toLowerCase()}, which forms a relatively softer movement ` +
+    `expression with more predictable internal variation, providing smoother operational response behaviour at this scale of review.`;
+
+const p3 =
+    `When compared jointly, ${summary.safer} expresses a more favourable operational tendency. Field movement, activity sequencing, ` +
+    `decision timing and execution consistency remain more predictable within ${summary.safer} relative to the alternate location. ` +
+    `The non-selected environment displays greater sensitivity to underlying variation, which influences planning windows and ` +
+    `precautionary alignment when movement decisions are executed.`;
+
+    return { paragraphs: [p1, p2, p3] };
+}
+
+
+
+</script>
+
+<script>
+// ============ COMPARISON: BUILD CASCADING DROPDOWNS FROM WARD LAYER ============
+
+// Reuse your normalize() helper from above, so do NOT redefine it.
+
+// Helper: wait until wardLayer has features
+function waitForWardFeatures(cb) {
+    let tries = 40;
+    (function check() {
+        if (!wardLayer || !wardLayer.getSource()) {
+            if (--tries <= 0) return cb([]);
+            return setTimeout(check, 150);
+        }
+        const feats = wardLayer.getSource().getFeatures();
+        if (feats && feats.length > 0) return cb(feats);
+        if (--tries <= 0) return cb([]);
+        setTimeout(check, 150);
+    })();
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const aState = document.getElementById("a-state");
+    const aLga   = document.getElementById("a-lga");
+    const aWard  = document.getElementById("a-ward");
+
+    const bState = document.getElementById("b-state");
+    const bLga   = document.getElementById("b-lga");
+    const bWard  = document.getElementById("b-ward");
+
+    if (!aState || !bState) {
+        console.warn("Compare panel elements not found");
+        return;
+    }
+
+    waitForWardFeatures(function (features) {
+        if (!features.length) {
+            console.error("No features in wardLayer for comparison.");
+            return;
+        }
+
+        // Build hierarchy: states[state][lga] = Set(wards)
+        const states = {};  // { stateName: { lgaName: Set(wardNames) } }
+
+        features.forEach(f => {
+            const sRaw = f.get("statename");
+            const lRaw = f.get("lganame");
+            const wRaw = f.get("wardname");
+
+            const s = (sRaw || "").toString().trim();
+            const l = (lRaw || "").toString().trim();
+            const w = (wRaw || "").toString().trim();
+
+            if (!s) return;
+
+            if (!states[s]) states[s] = {};
+            if (l) {
+                if (!states[s][l]) states[s][l] = new Set();
+                if (w) states[s][l].add(w);
+            }
+        });
+
+        const stateList = Object.keys(states).sort();
+
+        // Utility to fill <select>
+        function fillSelect(selectEl, placeholder, options) {
+            selectEl.innerHTML = "";
+            const base = document.createElement("option");
+            base.value = "";
+            base.textContent = placeholder;
+            selectEl.appendChild(base);
+
+            options.forEach(val => {
+                const opt = document.createElement("option");
+                opt.value = val;
+                opt.textContent = val;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        // Populate state dropdowns for A and B
+        fillSelect(aState, "State", stateList);
+        fillSelect(bState, "State", stateList);
+
+        // --- Cascading for Region A ---
+        aState.addEventListener("change", function () {
+            const s = this.value;
+            if (!s || !states[s]) {
+                fillSelect(aLga, "LGA", []);
+                fillSelect(aWard, "Ward (optional)", []);
+                return;
+            }
+            const lgas = Object.keys(states[s]).sort();
+            fillSelect(aLga, "LGA", lgas);
+            fillSelect(aWard, "Ward (optional)", []);
+        });
+
+        aLga.addEventListener("change", function () {
+            const s = aState.value;
+            const l = this.value;
+            if (!s || !l || !states[s] || !states[s][l]) {
+                fillSelect(aWard, "Ward (optional)", []);
+                return;
+            }
+            const wards = Array.from(states[s][l]).sort();
+            fillSelect(aWard, "Ward (optional)", wards);
+        });
+
+        // --- Cascading for Region B ---
+        bState.addEventListener("change", function () {
+            const s = this.value;
+            if (!s || !states[s]) {
+                fillSelect(bLga, "LGA", []);
+                fillSelect(bWard, "Ward (optional)", []);
+                return;
+            }
+            const lgas = Object.keys(states[s]).sort();
+            fillSelect(bLga, "LGA", lgas);
+            fillSelect(bWard, "Ward (optional)", []);
+        });
+
+        bLga.addEventListener("change", function () {
+            const s = bState.value;
+            const l = this.value;
+            if (!s || !l || !states[s] || !states[s][l]) {
+                fillSelect(bWard, "Ward (optional)", []);
+                return;
+            }
+            const wards = Array.from(states[s][l]).sort();
+            fillSelect(bWard, "Ward (optional)", wards);
+        });
+
+        console.log("Compare dropdowns populated from wardLayer.");
+    });
+
+});
+</script>
+
+<script>
+// ============ COMPARISON ENGINE (USING wardLayer + Risk Index_risk_score) ============
+
+// Small helper: average of numeric array
+function avg(arr) {
+    if (!arr.length) return 0;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+// Reuse the same classification ranges as buildRiskReportNarrative()
+function classifyScore(score) {
+    const s = Number(score);
+    if (s <= 190)  return "Very Low";
+    if (s <= 390)  return "Low";
+    if (s <= 889)  return "Medium";
+    if (s <= 3757) return "High";
+    return "Very High";
+}
+
+// Flexible matching: if ward is filled, use ward; else LGA; else state
+function matchRegionFeature(f, stateName, lgaName, wardName) {
+    const fState = normalize(f.get("statename"));
+    const fLga   = normalize(f.get("lganame"));
+    const fWard  = normalize(f.get("wardname"));
+
+    const s = normalize(stateName);
+    const l = normalize(lgaName);
+    const w = normalize(wardName);
+
+    // 1. If ward is specified, strongest filter
+    if (w) {
+        if (!fWard || !fWard.includes(w)) return false;
+        if (l && (!fLga || !fLga.includes(l))) return false;
+        if (s && (!fState || !fState.includes(s))) return false;
+        return true;
+    }
+
+    // 2. If only LGA specified
+    if (l) {
+        if (!fLga || !fLga.includes(l)) return false;
+        if (s && (!fState || !fState.includes(s))) return false;
+        return true;
+    }
+
+    // 3. Fallback: only state
+    if (s) {
+        if (!fState || !fState.includes(s)) return false;
+        return true;
+    }
+
+    // Nothing specified
+    return false;
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("compare-btn");
+    const out = document.getElementById("compare-result");
+
+    if (!btn || !out) return;
+
+    btn.addEventListener("click", function () {
+        if (!wardLayer || !wardLayer.getSource()) {
+            alert("Ward layer not ready.");
+            return;
+        }
+
+        // Read selections
+        const SA = document.getElementById("a-state").value;
+        const LA = document.getElementById("a-lga").value;
+        const WA = document.getElementById("a-ward").value;
+
+        const SB = document.getElementById("b-state").value;
+        const LB = document.getElementById("b-lga").value;
+        const WB = document.getElementById("b-ward").value;
+
+        // Require at least a state for both
+        if (!SA || !SB) {
+            alert("Select at least the state for both Region A and Region B.");
+            return;
+        }
+
+        const all = wardLayer.getSource().getFeatures();
+
+        const regionA = all.filter(f => matchRegionFeature(f, SA, LA, WA));
+        const regionB = all.filter(f => matchRegionFeature(f, SB, LB, WB));
+
+        if (!regionA.length) {
+            alert("No matching features found for Region A.");
+            return;
+        }
+        if (!regionB.length) {
+            alert("No matching features found for Region B.");
+            return;
+        }
+
+        // Use the same field your search meta uses:
+        // Risk Index_risk_score
+        function getStats(region) {
+            const scores = region.map(f => Number(f.get("Risk Index_risk_score")) || 0);
+            const mean   = avg(scores);
+            const cls    = classifyScore(mean);
+
+            return {
+                count: region.length,
+                avgScore: Number(mean.toFixed(1)),
+                riskClass: cls
+            };
+        }
+
+        const statsA = getStats(regionA);
+        const statsB = getStats(regionB);
+
+        // Rank classes: Very Low < Low < Medium < High < Very High
+        const rankMap = {
+            "Very Low": 1,
+            "Low": 2,
+            "Medium": 3,
+            "High": 4,
+            "Very High": 5
+        };
+
+        let safer = "Region A";
+        if (rankMap[statsB.riskClass] < rankMap[statsA.riskClass]) safer = "Region B";
+        else if (rankMap[statsB.riskClass] === rankMap[statsA.riskClass]) {
+            // tie-break: lower average score wins
+            safer = statsA.avgScore <= statsB.avgScore ? "Region A" : "Region B";
+        }
+
+        // Save globally for PDF step later
+        window.lastCompareSummary = {
+            chosenA: { state: SA, lga: LA, ward: WA },
+            chosenB: { state: SB, lga: LB, ward: WB },
+            statsA,
+            statsB,
+            safer
+        };
+// ======= HIGHLIGHT BOTH REGIONS ON MAP =======
+
+// ======= HIGHLIGHT BOTH REGIONS ON MAP =======
+// ======= HIGHLIGHT BOTH REGIONS ON MAP =======
+
+highlightSource.clear();
+let finalExtent = ol.extent.createEmpty();
+
+function highlightCorrectGeometry(region, label) {
+
+    const selectedState = document.getElementById(label === "A" ? "a-state" : "b-state").value;
+    const selectedLGA   = document.getElementById(label === "A" ? "a-lga" : "b-lga").value;
+    const selectedWard  = document.getElementById(label === "A" ? "a-ward" : "b-ward").value;
+
+    // CASE 1: State-only selection
+    if (selectedState && !selectedLGA && !selectedWard) {
+        const stateFeature = lyr_RiskIndex_1.getSource().getFeatures().find(f =>
+            normalize(f.get("statename")) === normalize(selectedState)
+        );
+
+        if (!stateFeature) return;
+
+        const geom = stateFeature.getGeometry().clone();
+        const feat = new ol.Feature({ geometry: geom });
+        feat.set("labelText", label);
+        highlightSource.addFeature(feat);
+
+        const extent = geom.getExtent();
+        ol.extent.extend(finalExtent, extent);
+        return;
+    }
+
+    // CASE 2: LGA or WARD selected
+    region.forEach(f => {
+        const geom = f.getGeometry().clone();
+        const feat = new ol.Feature({ geometry: geom });
+        feat.set("labelText", label);
+        highlightSource.addFeature(feat);
+
+        ol.extent.extend(finalExtent, geom.getExtent());
+    });
+}
+
+highlightCorrectGeometry(regionA, "A");
+highlightCorrectGeometry(regionB, "B");
+
+// fit map first
+if (!ol.extent.isEmpty(finalExtent)) {
+    finalExtent = ol.extent.buffer(finalExtent, 15000);
+
+    map.getView().fit(finalExtent, {
+        duration: 1000,
+        padding: [80, 380, 80, 80],
+        maxZoom: 11
+    });
+}
+
+// After zoom finishes, capture separately
+setTimeout(() => {
+
+    // temporarily hide B highlight
+    highlightSource.clear();
+    highlightCorrectGeometry(regionA, "A");
+
+    setTimeout(() => {
+        const cA = getMapCanvas();
+        if(cA){
+            window.lastCompareSnapshotA = cA.toDataURL("image/png");
+        }
+
+        // now switch to B only
+        highlightSource.clear();
+        highlightCorrectGeometry(regionB, "B");
+
+        setTimeout(() => {
+            const cB = getMapCanvas();
+            if(cB){
+                window.lastCompareSnapshotB = cB.toDataURL("image/png");
+            }
+
+            // after both captured, redraw both
+            highlightSource.clear();
+            highlightCorrectGeometry(regionA, "A");
+            highlightCorrectGeometry(regionB, "B");
+
+        }, 600);
+
+    }, 600);
+
+}, 1200);
+
+
+
+
+        // Show result in the panel
+        out.innerHTML = `
+            <div style="font-size:12px;">
+                <div><strong>Region A</strong></div>
+                <div>Location: ${SA || ""}${LA ? ", " + LA : ""}${WA ? ", " + WA : ""}</div>
+                <div>Features used: ${statsA.count}</div>
+                <div>Average risk score: ${statsA.avgScore}</div>
+                <div>Risk class: ${statsA.riskClass}</div>
+
+                <hr style="margin:6px 0;">
+
+                <div><strong>Region B</strong></div>
+                <div>Location: ${SB || ""}${LB ? ", " + LB : ""}${WB ? ", " + WB : ""}</div>
+                <div>Features used: ${statsB.count}</div>
+                <div>Average risk score: ${statsB.avgScore}</div>
+                <div>Risk class: ${statsB.riskClass}</div>
+
+                <hr style="margin:6px 0;">
+
+                <div><strong>Safer region:</strong> ${safer}</div>
+            </div>
+        `;
+
+        console.log("Comparison summary:", window.lastCompareSummary);
+
+        // >>>>>> INSERT BUTTON HERE WHILE STILL INSIDE CLICK
+const actionDiv = document.getElementById("compare-report-action");
+actionDiv.innerHTML = `
+    <button id="downloadComparePDFBtn"
+        style="width:100%; padding:8px; margin-top:6px; background-color:#004aad; color:white; border:none; border-radius:3px;">
+        Download Comparison Report (PDF)
+    </button>
+`;
+actionDiv.style.display = "block";
+
+document.getElementById("downloadComparePDFBtn").addEventListener("click", () => {
+
+    const summary = window.lastCompareSummary;
+    if (!summary) return;
+
+    const p1 =
+        `The interpreted result reflects observable exposure tendencies derived from underlying event concentrations, ` +
+        `response presence, monitored boundary activity and the general continuity of route influence. Each selected ` +
+        `location represents a distinct behavioural expression shaped by how security-structured activity circulates ` +
+        `within the environment during field operations, movement routing or routine accessibility.`;
+
+    const p2 =
+        `In the first referenced area, mobility sequencing, planning consideration and response alignment remain ` +
+        `tangible indicators that would require structured scheduling. Region B expresses a more softened accessibility ` +
+        `behaviour with reduced irregularity across its internal movement variations, which forms a more predictable ` +
+        `operational interaction pattern.`;
+
+    const p3 =
+        `When examined jointly, ${summary.safer} maintains a more favourable movement planning condition relative to ` +
+        `the alternate location. Decision stability, scheduling predictability and execution staging remain less sensitive ` +
+        `to environmental variation within ${summary.safer}.`;
+
+     pdfDiv = document.createElement("div");
+pdfDiv.style.width = "100%";
+pdfDiv.style.minHeight = "1120px";
+pdfDiv.style.position = "relative";
+pdfDiv.style.padding = "40px";
+pdfDiv.style.fontFamily = "'Times New Roman', Times, serif";
+pdfDiv.style.lineHeight = "1.5";
+pdfDiv.style.textAlign = "justify";
+
+
+
+    const A = summary.chosenA;
+    const B = summary.chosenB;
+
+    let locA = A.state;
+    if (A.lga) locA = `${A.lga}, ${locA}`;
+    if (A.ward) locA = `${A.ward}, ${locA}`;
+
+    let locB = B.state;
+    if (B.lga) locB = `${B.lga}, ${locB}`;
+    if (B.ward) locB = `${B.ward}, ${locB}`;
+pdfDiv.innerHTML = `
+<div style="padding:45px 90px 140px 45px; position:relative;">
+
+    <img src="images/logo.jpg"
+         style="position:absolute; top:40px; left:40px; width:130px;">
+
+    <h3 style="text-align:center; font-weight:bold; margin-top:5px;">
+        GEOINFOTECH RESOURCES LIMITED
+    </h3>
+
+    <h3 style="text-align:center; font-weight:bold; margin-top:8px;">
+        SECURITY INFRASTRUCTURE COMPARISON REPORT
+    </h3>
+
+    <h4 style="text-align:center; font-weight:bold; margin-top:14px; text-transform:uppercase;">
+        Comparative Assessment Summary
+    </h4>
+
+    <div style="height:25px;"></div>
+
+    <p style="font-size:14px; margin-bottom:6px;"><strong>Region A:</strong> ${locA}</p>
+    <p style="font-size:14px;"><strong>Region B:</strong> ${locB}</p>
+
+    <div style="height:22px;"></div>
+
+    <p style="font-size:14px; text-align:justify; margin-bottom:14px;">
+        ${p1}
+    </p>
+
+    <p style="font-size:14px; text-align:justify; margin-bottom:14px;">
+        ${p2}
+    </p>
+
+    <p style="font-size:14px; text-align:justify;">
+        ${p3}
+    </p>
+
+    <div style="height:30px;"></div>
+
+    <h4 style="text-align:center; font-weight:bold; margin-top:5px;">
+        Selected Regions Overview
+    </h4>
+
+    <div style="height:10px;"></div>
+
+    <div style="width:100%; display:flex; justify-content:space-between;">
+        
+        <div style="width:48%; text-align:center;">
+            <strong style="font-size:13px;">Region A (${locA})</strong><br>
+            <img src="${window.lastCompareSnapshotA}"
+                style="width:100%; height:240px; border:2px solid #000; border-radius:4px; object-fit:contain;">
+        </div>
+
+        <div style="width:48%; text-align:center;">
+            <strong style="font-size:13px;">Region B (${locB})</strong><br>
+            <img src="${window.lastCompareSnapshotB}"
+                style="width:100%; height:240px; border:2px solid #000; border-radius:4px; object-fit:contain;">
+        </div>
+
+    </div>
+
+    <div style="
+        position:absolute;
+        bottom:35px;
+        left:0;
+        width:100%;
+        text-align:center;
+        font-size:11px;
+        font-weight:bold;
+    ">
+        Oluwaglobon House, Obafemi Awolowo Way, Alausa Ikeja Lagos NG<br>
+        101233 Lagos, Nigeria<br>
+        0816 322 2177 | +234 813 410 1202<br>
+        contact@geoinfotech.ng | mail@geoinfotech.ng
+        <br><br>
+        <span style="font-weight:normal; font-size:10px;">
+            Generated automatically by GeoInfoTech Risk Engine
+        </span>
+    </div>
+
+</div>
+`;
+
+
+html2pdf()
+    .from(pdfDiv)
+    .set({
+        margin: 0,
+        filename: `Comparison_Report_${locA.replace(/,/g,"-")}_vs_${locB.replace(/,/g,"-")}.pdf`,
+        jsPDF: { format: "a4", orientation: "portrait" },
+        html2canvas: { scale: 2 }
+    })
+    .save();
+});
+
+}); // CLOSES compare-btn click
+    });
+
+
+
+
+
+
+</script>
+
+        <script src="./resources/qgis2web.js"></script>    
+        <script>
+    let realMap = map;
+
+    document.getElementById("resetNigeriaBtn").addEventListener("click", () => {
+    try {
+        const fullExtent = wardLayer.getSource().getExtent();
+
+        map.getView().fit(fullExtent, {
+            duration: 900,
+            padding: [60, 60, 60, 60]
+        });
+    } catch (e) {
+        console.warn("Fallback extent used", e);
+
+        const nigeriaFallbackExtent = [
+            -200000,      // far west
+            400000,       // lower south
+            10000000,     // far east
+            15000000      // far north
+        ];
+
+        map.getView().fit(nigeriaFallbackExtent, {
+            duration: 900,
+            padding: [60, 60, 60, 60]
+        });
+    }
+});
+
+
+// Create highlight layer and source
+let highlightSource = new ol.source.Vector();
+let highlightLayer = new ol.layer.Vector({
+    source: highlightSource,
+    style: function(feature) {
+    const textVal = feature.get("labelText");
+
+    return [
+        new ol.style.Style({
+            stroke: new ol.style.Stroke({
+                color: '#000000',
+                width: 4
+            }),
+            fill: new ol.style.Fill({
+                color: 'rgba(255,255,255,0.35)' // subtle fill so highlight is soft
+            })
+        }),
+
+        textVal
+            ? new ol.style.Style({
+                text: new ol.style.Text({
+                    text: textVal,
+                    font: 'bold 18px Arial',
+                    fill: new ol.style.Fill({ color: '#000' }),
+                    stroke: new ol.style.Stroke({ color: '#fff', width: 3 })
+                })
+            })
+            : null
+    ].filter(v => v !== null);
+},
+
+    zIndex: 99999
+});
+
+// Add highlight on map
+map.addLayer(highlightLayer);
+highlightLayer.setZIndex(999999);
+
+</script>
+<div id="pdfContent" style="display:none; width:100%; position:relative; min-height:1120px;">
+    <div id="pdf-main-body" style="padding:40px; font-family:Arial; padding-bottom:160px;">
+
+    <!-- BODY CONTENT -->
+    <div id="pdf-body" style="padding:30px; font-family:'Times New Roman', Times, serif; line-height:1.5;">
+
+        <img src="images/logo.jpg" style="position:absolute; top:45px; left:45px; width:140px;">
+  
+        <h3 style="text-align:center; font-weight:bold; margin:0;">
+    GEOINFOTECH RESOURCES LIMITED
+</h3>
+
+<h3 style="text-align:center; font-weight:bold; margin-top:8px;">
+    SECURITY INFRASTRUCTURE REPORT
+</h3>
+
+
+<h4 style="font-weight:bold; text-transform:uppercase; margin-top:5px; text-align:center;">
+    Risk Assessment Summary
+</h4>
+
+
+
+        <div style="height:25px;"></div>
+
+        <p><strong>Location:</strong> <span id="pdf-location"></span></p>
+        <p><strong>Risk Classification:</strong> <span id="pdf-class"></span></p>
+
+        <div style="height:25px;"></div>
+
+        <p id="pdf-p1" style="text-align:justify;"></p>
+        <p id="pdf-p2" style="text-align:justify;"></p>
+        <p id="pdf-p3" style="text-align:justify;"></p>
+
+        <div style="height:20px;"></div>
+
+<h4 style="font-weight:bold; text-transform:uppercase; text-align:center; margin-bottom:10px;">
+    Selected Location Overview
+</h4>
+
+<div id="pdf-map-box" 
+    style="
+        width: 80%;
+        margin: auto;
+        height: 200px;
+        border: 2px solid #000;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+">
+    <img id="pdf-map-image" style="height:100%; width:auto; display:none; object-fit:contain;">
+</div>
+
+
+<div style="height: 25px;"></div>
+
+
+    </div>
+
+    <!-- FOOTER CONTENT -->
+    <div id="pdf-footer"
+    style="
+        position:absolute;
+        bottom:35px;
+        width:100%;
+        text-align:center;
+        font-size:11px;
+        font-weight:bold;
+    ">
+    Oluwaglobon House, Obafemi Awolowo Way, Alausa Ikeja Lagos NG<br>
+    101233 Lagos, Nigeria<br>
+    0816 322 2177 | +234 813 410 1202<br>
+    contact@geoinfotech.ng | mail@geoinfotech.ng
+    <br><br>
+    <span style="font-weight:normal; font-size:10px;">
+        Generated automatically by GeoInfoTech Risk Engine
+    </span>
+</div>
+
+    </div>
+
+</div>    
+    </body>
+</html>
